@@ -1,87 +1,102 @@
 body {
-    font-family: Arial;
-    margin: 20px;
-    background: #f4f6f9;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6fb;
 }
 
-.filters {
-    margin-bottom: 15px;
-    display: flex;
-    gap: 10px;
+/* LAYOUT */
+.app {
+  display: flex;
+  height: 100vh;
 }
 
-button {
-    padding: 8px 12px;
-    margin-right: 5px;
-    background: #2962ff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
+/* SIDEBAR */
+.sidebar {
+  width: 240px;
+  background: #0f172a;
+  color: white;
+  padding: 20px;
 }
 
-/* ========================= */
-/* MONTH */
-/* ========================= */
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
+.logo {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 20px;
 }
 
-.day {
-    background: white;
-    padding: 10px;
-    border-radius: 10px;
-    min-height: 140px;
+.sidebar button {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #1e293b;
+  color: white;
+  cursor: pointer;
 }
 
-.event {
-    background: #1e88e5;
-    color: white;
-    padding: 5px;
-    margin-top: 5px;
-    border-radius: 6px;
-    font-size: 12px;
+/* MAIN */
+.main {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
 }
 
-/* ========================= */
-/* WEEK */
-/* ========================= */
-
-.week-view {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    height: 1000px;
+/* KPI */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
 }
 
-.week-column {
-    background: white;
-    border-radius: 10px;
-    position: relative;
-    border: 1px solid #ddd;
+.kpi {
+  background: white;
+  padding: 15px;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-.week-header {
-    text-align: center;
-    padding: 10px;
-    font-weight: bold;
-    border-bottom: 1px solid #ddd;
-    background: #fafafa;
+.kpi h3 {
+  margin: 0;
+  font-size: 24px;
 }
 
-.week-event {
-    position: absolute;
-    left: 5px;
-    right: 5px;
-    border-radius: 8px;
-    padding: 5px;
-    color: white;
-    font-size: 11px;
+/* CARDS */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-.hidden {
-    display: none;
+/* CALENDAR */
+#calendar {
+  background: white;
+  padding: 15px;
+  border-radius: 14px;
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  background: white;
+  border-radius: 12px;
+  border-collapse: collapse;
+  overflow: hidden;
+}
+
+td, th {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* CALENDAR FIX */
+.fc {
+  font-size: 13px;
+}
+
+.fc-event {
+  border-radius: 8px !important;
+  padding: 3px !important;
 }
