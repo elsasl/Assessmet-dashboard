@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Assessment Dashboard</title>
+
+    <!-- FullCalendar -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <div class="topbar">
+
+        <h1>Assessment Dashboard 📅</h1>
+
+        <div class="filters">
+
+            <input type="text" id="searchInput" placeholder="Search assessments...">
+
+            <select id="typeFilter">
+                <option value="">All Types</option>
+            </select>
+
+        </div>
+
+    </div>
+
+    <!-- CALENDAR -->
+    <div id="calendar"></div>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
