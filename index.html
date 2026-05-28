@@ -1,41 +1,66 @@
 <!DOCTYPE html>
 <html>
-
 <head>
+  <title>UCVM Assessment Dashboard</title>
 
-    <title>Assessment Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
-    <!-- FullCalendar -->
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-
-    <link rel="stylesheet" href="style.css">
-
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <!-- HEADER -->
-    <div class="topbar">
+<div class="app">
 
-        <h1>Assessment Dashboard 📅</h1>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">UCVM DASH</div>
 
-        <div class="filters">
+    <button onclick="showView('overview')">Overview</button>
+    <button onclick="showView('calendar')">Calendar</button>
+    <button onclick="showView('table')">Data</button>
+  </aside>
 
-            <input type="text" id="searchInput" placeholder="Search assessments...">
+  <!-- MAIN -->
+  <main class="main">
 
-            <select id="typeFilter">
-                <option value="">All Types</option>
-            </select>
+    <!-- KPI -->
+    <section class="kpi-grid">
+      <div class="kpi">
+        <h3 id="kpiTotal">0</h3>
+        <p>Total Assessments</p>
+      </div>
 
-        </div>
+      <div class="kpi">
+        <h3 id="kpiExams">0</h3>
+        <p>Exams</p>
+      </div>
 
-    </div>
+      <div class="kpi">
+        <h3 id="kpiHigh">0</h3>
+        <p>High Weight</p>
+      </div>
+    </section>
 
-    <!-- CALENDAR -->
-    <div id="calendar"></div>
+    <!-- VIEWS -->
+    <section id="overview" class="view active">
+      <div class="card">
+        <h2>Assessment Overview</h2>
+        <p>Your UCVM schedule dashboard is active.</p>
+      </div>
+    </section>
 
-    <script src="app.js"></script>
+    <section id="calendar" class="view"></section>
+
+    <section id="tableView" class="view">
+      <table id="table"></table>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="app.js"></script>
 
 </body>
-
 </html>
