@@ -1,66 +1,347 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>UCVM Assessment Dashboard</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assessment Calendar Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 </head>
-
 <body>
 
-<div class="app">
-
-  <!-- SIDEBAR -->
+  <!-- ══ SIDEBAR — filters only ════════════════════════════════════════════ -->
   <aside class="sidebar">
-    <div class="logo">UCVM DASH</div>
 
-    <button onclick="showView('overview')">Overview</button>
-    <button onclick="showView('calendar')">Calendar</button>
-    <button onclick="showView('table')">Data</button>
+    <div class="sidebar-logo">
+      <div class="logo-icon">📅</div>
+      <div class="logo-text">
+        <span class="logo-title">Assessment Calendar</span>
+        <span class="logo-sub">Dashboard</span>
+      </div>
+    </div>
+
+    <div class="sidebar-filters">
+      <div class="filter-label">FILTERS</div>
+
+      <div class="filter-group">
+        <label class="filter-field-label">Search</label>
+        <input type="text" id="search-input" class="filter-input" placeholder="Course, type, keyword…" />
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-field-label">Academic Year</label>
+        <select id="filter-year" class="filter-select">
+          <option value="all">All Years</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-field-label">Month</label>
+        <select id="filter-month" class="filter-select">
+          <option value="all" selected>All Months</option>
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-field-label">Course</label>
+        <select id="filter-course" class="filter-select">
+          <option value="all">All Courses</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-field-label">Type</label>
+        <select id="filter-type" class="filter-select">
+          <option value="all">All Types</option>
+        </select>
+      </div>
+
+      <button id="reset-filters" class="btn-reset">↺ Reset Filters</button>
+
+      <!-- Active filter chips -->
+      <div id="filter-summary" class="filter-summary hidden">
+        <div class="filter-summary-title">Active</div>
+        <div id="filter-tags" class="filter-tags"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button id="export-btn" class="btn-export">⬇ Export CSV</button>
+      <button id="dark-toggle" class="btn-dark-toggle" title="Toggle dark mode">🌙</button>
+    </div>
   </aside>
 
-  <!-- MAIN -->
-  <main class="main">
+  <!-- ══ MAIN CONTENT ═══════════════════════════════════════════════════════ -->
+  <div class="main-wrapper">
 
-    <!-- KPI -->
-    <section class="kpi-grid">
-      <div class="kpi">
-        <h3 id="kpiTotal">0</h3>
-        <p>Total Assessments</p>
+    <!-- ── Top header with tabs ────────────────────────────────────────────── -->
+    <header class="top-header">
+      <div class="top-header-row1">
+        <h1 class="app-title">📅 Assessment Calendar Dashboard</h1>
+        <div id="header-stats" class="header-stats"></div>
       </div>
+      <nav class="top-tabs">
+        <button class="top-tab active" data-tab="overview">◈ Overview</button>
+        <button class="top-tab" data-tab="risk">⚠️ Risk Alerts</button>
+        <button class="top-tab" data-tab="calendar">▦ Calendar</button>
+        <button class="top-tab" data-tab="analytics">◉ Analytics</button>
+        <button class="top-tab" data-tab="datatable">☰ Data Table</button>
+      </nav>
+    </header>
 
-      <div class="kpi">
-        <h3 id="kpiExams">0</h3>
-        <p>Exams</p>
-      </div>
+    <!-- ── Filter bar (shows when sidebar filters active) ──────────────────── -->
+    <div id="global-filter-bar" class="global-filter-bar hidden">
+      <span class="filter-bar-icon">⚡</span>
+      <span id="global-filter-text" class="filter-bar-text"></span>
+      <div id="global-filter-chips" class="filter-bar-chips"></div>
+      <button id="global-filter-clear" class="filter-bar-clear">Clear all</button>
+    </div>
 
-      <div class="kpi">
-        <h3 id="kpiHigh">0</h3>
-        <p>High Weight</p>
-      </div>
-    </section>
+    <!-- ── Custom filter banner (shows when Risk/Insight/Analytics filtered) ─ -->
+    <div id="custom-filter-banner" class="custom-filter-banner hidden">
+      <span class="cfb-icon">⚠️</span>
+      <span class="cfb-count"></span>
+      — you are viewing a filtered subset from Risk Alerts or Insights.
+      <button id="cfb-clear" class="cfb-clear-btn">Show all assessments</button>
+    </div>
 
-    <!-- VIEWS -->
-    <section id="overview" class="view active">
-      <div class="card">
-        <h2>Assessment Overview</h2>
-        <p>Your UCVM schedule dashboard is active.</p>
-      </div>
-    </section>
+    <main class="main-content">
 
-    <section id="calendar" class="view"></section>
+      <!-- ══ OVERVIEW TAB ════════════════════════════════════════════════════ -->
+      <section id="tab-overview" class="tab-panel active">
+        <div id="kpi-grid" class="kpi-grid"></div>
+        <div class="overview-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">📊 Assessments by Month</h3>
+            </div>
+            <div class="chart-wrap"><canvas id="monthly-chart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">⚠️ Risk Summary</h3>
+              <button class="card-link-btn" data-tab="risk">View Risk tab →</button>
+            </div>
+            <div id="risk-counters" class="risk-counters"></div>
+          </div>
+        </div>
+        <!-- Top risks preview -->
+        <div class="card card-full">
+          <div class="card-header">
+            <h3 class="card-title">🔴 Top Risk Alerts</h3>
+            <button class="card-link-btn" data-tab="risk">See all in Risk tab →</button>
+          </div>
+          <div id="risk-preview" class="risk-preview-list"></div>
+        </div>
+      </section>
 
-    <section id="tableView" class="view">
-      <table id="table"></table>
-    </section>
+      <!-- ══ RISK TAB ════════════════════════════════════════════════════════ -->
+      <section id="tab-risk" class="tab-panel">
 
-  </main>
+        <!-- Sub-tabs within Risk -->
+        <div class="subtab-bar">
+          <button class="subtab active" data-subtab="risk-overlaps">📅 Same-Day Overlaps</button>
+          <button class="subtab" data-subtab="risk-clusters">🔴 Back-to-Back Days</button>
+          <button class="subtab" data-subtab="risk-insights">💡 Insights</button>
+        </div>
 
-</div>
+        <!-- Same-Day Overlaps panel -->
+        <div id="risk-overlaps" class="subtab-panel active">
+          <div class="risk-panel-intro">
+            <div class="rpi-icon">📅</div>
+            <div class="rpi-text">
+              <div class="rpi-title-row">
+                <span class="rpi-title">Same-Day Overlaps</span>
+                <span id="overlap-count-badge" class="risk-count-badge"></span>
+              </div>
+              <div class="rpi-desc">Days where 2 or more assessments (≥10% weight each) fall on the same date. Click any row to see details and jump to the calendar.</div>
+            </div>
+          </div>
+          <div id="overlap-year-tabs" class="year-filter-tabs"></div>
+          <div class="risk-inbox-body">
+            <div id="overlap-inbox-list" class="risk-inbox-list"></div>
+            <div id="overlap-inbox-detail" class="risk-inbox-detail">
+              <div class="risk-detail-empty">← Select a day to see details</div>
+            </div>
+          </div>
+        </div>
 
-<script src="app.js"></script>
+        <!-- Back-to-Back Days panel -->
+        <div id="risk-clusters" class="subtab-panel">
+          <div class="risk-panel-intro">
+            <div class="rpi-icon">🔴</div>
+            <div class="rpi-text">
+              <div class="rpi-title-row">
+                <span class="rpi-title">Back-to-Back Days</span>
+                <span id="cluster-count-badge" class="risk-count-badge"></span>
+              </div>
+              <div class="rpi-desc">3 or more consecutive weekdays (Mon–Fri) each with assessments ≥10% weight, within the same academic year. Weekends break the streak.</div>
+            </div>
+          </div>
+          <div id="cluster-year-tabs" class="year-filter-tabs"></div>
+          <div class="risk-inbox-body">
+            <div id="cluster-inbox-list" class="risk-inbox-list"></div>
+            <div id="cluster-inbox-detail" class="risk-inbox-detail">
+              <div class="risk-detail-empty">← Select a streak to see details</div>
+            </div>
+          </div>
+        </div>
 
+        <!-- Insights panel -->
+        <div id="risk-insights" class="subtab-panel">
+          <div class="risk-panel-intro">
+            <div class="rpi-icon">💡</div>
+            <div class="rpi-text">
+              <div class="rpi-title-row">
+                <span class="rpi-title">Insights Engine</span>
+              </div>
+              <div class="rpi-desc">Auto-detected patterns — exam concentration, weight overload, and scheduling anomalies. Click any row to jump to the calendar.</div>
+            </div>
+          </div>
+          <div id="insights-timeline" class="insights-timeline"></div>
+          <div class="insights-type-filters-wrap">
+            <div id="insights-type-filters" class="insights-type-filters"></div>
+          </div>
+          <div class="insights-table-wrap">
+            <table class="insights-table">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Date / Period</th>
+                  <th>Yr</th>
+                  <th>Details</th>
+                  <th>Combined Weight</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="insights-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ CALENDAR TAB ════════════════════════════════════════════════════ -->
+      <section id="tab-calendar" class="tab-panel">
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="btn-cal-nav" id="cal-prev">‹</button>
+            <span class="cal-label-text" id="cal-label">Loading…</span>
+            <button class="btn-cal-nav" id="cal-next">›</button>
+            <button class="btn-cal-today" id="cal-today">Today</button>
+          </div>
+          <div class="cal-view-toggle">
+            <button class="cal-view-btn active" id="cal-month-btn">Month</button>
+            <button class="cal-view-btn" id="cal-week-btn">Week</button>
+          </div>
+        </div>
+        <div class="card card-full card-no-pad">
+          <div id="calendar-body"></div>
+        </div>
+      </section>
+
+      <!-- ══ ANALYTICS TAB ═══════════════════════════════════════════════════ -->
+      <section id="tab-analytics" class="tab-panel">
+        <div class="card card-full">
+          <div class="card-header">
+            <h3 class="card-title">📈 Weekly Workload Distribution</h3>
+            <span class="card-hint">Bars = count · Line = weight %</span>
+          </div>
+          <div class="chart-wrap chart-tall"><canvas id="weekly-chart"></canvas></div>
+        </div>
+        <div class="analytics-grid">
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Assessment Type Distribution</h3></div>
+            <div class="chart-wrap"><canvas id="type-chart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Average Weight by Assessment Type</h3>
+              <span class="card-hint">Mean % per type across all courses</span>
+            </div>
+            <div class="chart-wrap"><canvas id="avg-weight-chart"></canvas></div>
+          </div>
+        </div>
+        <div class="card card-full" style="margin-top:14px">
+          <div class="card-header">
+            <h3 class="card-title">Weekly Assessment Density</h3>
+            <span class="card-hint">Each cell = one week · darker = more assessments · click to view in calendar</span>
+          </div>
+          <div id="heatmap-container"></div>
+        </div>
+        <div class="analytics-grid">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Same-Day Overlaps</h3>
+              <span class="card-hint">Click any row → calendar</span>
+            </div>
+            <div id="overlap-list" class="overlap-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Course Breakdown</h3></div>
+            <div id="course-breakdown" class="course-breakdown"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ DATA TABLE TAB ══════════════════════════════════════════════════ -->
+      <section id="tab-datatable" class="tab-panel">
+        <div class="card card-full card-no-pad">
+          <div class="dt-header">
+            <div class="dt-title">☰ All Assessments</div>
+            <div id="dt-count" class="dt-count"></div>
+            <div class="dt-sort-hint">Click column headers to sort</div>
+          </div>
+          <div class="dt-table-wrap">
+            <table class="dt-table" id="dt-table">
+              <thead>
+                <tr>
+                  <th data-col="course">Course</th>
+                  <th data-col="year">Yr</th>
+                  <th data-col="courseName">Course Name</th>
+                  <th data-col="type">Type</th>
+                  <th data-col="details">Details</th>
+                  <th data-col="weight">Weight</th>
+                  <th data-col="effectiveDate">Date</th>
+                  <th data-col="startTime">Time</th>
+                  <th data-col="location">Location</th>
+                  <th data-col="format">Format</th>
+                </tr>
+              </thead>
+              <tbody id="dt-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ══ MODAL ══════════════════════════════════════════════════════════════ -->
+  <div id="modal" class="modal-container"></div>
+
+  <!-- ══ SCRIPTS ════════════════════════════════════════════════════════════ -->
+  <script src="core/authLayer.js"></script>
+  <script src="core/dataService.js"></script>
+  <script src="core/stateManager.js"></script>
+  <script src="core/dataParser.js"></script>
+  <script src="core/analyticsEngine.js"></script>
+  <script src="core/riskDetector.js"></script>
+  <script src="core/calendarEngine.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
