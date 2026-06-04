@@ -174,7 +174,7 @@ canvas { display: block; }
   line-height: 1.4; flex: 1;
 }
 .fbar-arrow {
-  font-size: 11px; color: var(--text-3); pointer-events: none; flex-shrink: 0; opacity: .7;
+  font-size: 14px; color: var(--text-2); pointer-events: none; flex-shrink: 0;
 }
 .fbar-reset {
   padding: 7px 14px; font-size: 12px; font-weight: 600;
@@ -425,8 +425,8 @@ html.dark .global-filter-bar { background: #0d1f3c; border-bottom-color: #1e3a6a
 .cal-cell:nth-child(7n) { border-right: none; }
 .cal-other { background: var(--surface-2); opacity: .55; }
 .cal-today { background: var(--accent-light); }
-.cal-cell.risk-day { background: #FFFBEB; }
-html.dark .cal-cell.risk-day { background: #1C1400; }
+.cal-cell.risk-day { border-left: 3px solid #F59E0B; }
+html.dark .cal-cell.risk-day { border-left: 3px solid #D97706; }
 .cal-date-num {
   font-family: var(--font-head); font-size: 12px; font-weight: 600;
   color: var(--text-3); margin-bottom: 3px; text-align: right; padding-right: 2px;
@@ -490,36 +490,50 @@ html.dark .cal-cell.risk-day { background: #1C1400; }
 .chart-wrap      { position: relative; height: 220px; }
 .chart-tall      { height: 260px; }
 
-/* KPIs */
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px,1fr)); gap: 10px; margin-bottom: 16px; }
+/* KPIs — minimal, number-first design */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); gap: 10px; margin-bottom: 18px; }
 .kpi-card {
-  background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-2);
-  border-radius: var(--radius-lg); padding: 14px 16px;
-  display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid var(--border);
+  border-top: 3px solid var(--border-2);
+  border-radius: var(--radius-lg); padding: 16px 16px 13px;
+  display: flex; flex-direction: column; gap: 5px;
+  box-shadow: var(--shadow); transition: box-shadow var(--transition);
 }
 .kpi-card:hover { box-shadow: var(--shadow-md); }
-.kpi-icon  { font-size: 19px; flex-shrink: 0; opacity: .8; }
-.kpi-value { font-family: var(--font-head); font-size: 22px; font-weight: 700; line-height: 1; color: var(--text); }
-.kpi-label { font-size: 10.5px; color: var(--text-3); margin-top: 3px; font-weight: 500; }
-.kpi-blue   { border-left-color: #1A3A6B; } .kpi-blue   .kpi-value { color: #1A3A6B; }
-.kpi-teal   { border-left-color: #0E7490; } .kpi-teal   .kpi-value { color: #0E7490; }
-.kpi-amber  { border-left-color: #B45309; } .kpi-amber  .kpi-value { color: #B45309; }
-.kpi-red    { border-left-color: #B91C1C; } .kpi-red    .kpi-value { color: #B91C1C; }
-.kpi-purple { border-left-color: #6D28D9; } .kpi-purple .kpi-value { color: #6D28D9; }
-.kpi-green  { border-left-color: #166534; } .kpi-green  .kpi-value { color: #166534; }
-.kpi-indigo { border-left-color: #3730A3; } .kpi-indigo .kpi-value { color: #3730A3; }
-.kpi-pink   { border-left-color: #9D174D; } .kpi-pink   .kpi-value { color: #9D174D; }
+.kpi-value { font-family: var(--font-head); font-size: 26px; font-weight: 700; line-height: 1; color: var(--text); }
+.kpi-label { font-size: 11px; color: var(--text-3); font-weight: 500; letter-spacing: .1px; }
+/* Accent via top border only — subtle, not loud */
+.kpi-blue   { border-top-color: #3B82F6; }
+.kpi-teal   { border-top-color: #0E7490; }
+.kpi-amber  { border-top-color: #D97706; }
+.kpi-red    { border-top-color: #DC2626; }
+.kpi-purple { border-top-color: #7C3AED; }
+.kpi-green  { border-top-color: #059669; }
+.kpi-indigo { border-top-color: #4F46E5; }
+.kpi-pink   { border-top-color: #DB2777; }
 
-/* Risk counters (overview) */
-.risk-counters { display: flex; flex-direction: column; gap: 10px; }
-.rc-row  { display: flex; gap: 10px; }
-.rc-block { flex:1; padding: 12px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--border); border-top: 3px solid var(--border-2); background: var(--surface-2); }
-.rc-overlap  { border-top-color: #B45309; }
-.rc-cluster  { border-top-color: #B91C1C; }
-.rc-critical { border-top-color: #6D28D9; }
-.rc-num { font-family: var(--font-head); font-size: 26px; font-weight: 700; line-height: 1; color: var(--text); }
-.rc-lbl { font-size: 10px; font-weight: 600; color: var(--text-3); margin-top: 4px; line-height: 1.4; }
-.rc-note { font-size: 11px; color: var(--text-3); text-align: center; padding-top: 4px; }
+/* Risk summary (overview) */
+.risk-counters { display: flex; flex-direction: column; gap: 14px; }
+.rc-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.rc-stat {
+  padding: 12px 10px; text-align: center;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius); transition: box-shadow var(--transition);
+}
+.rc-stat:hover { box-shadow: var(--shadow-md); }
+.rc-stat-num { font-family: var(--font-head); font-size: 28px; font-weight: 800; line-height: 1; }
+.rc-stat-lbl { font-size: 10.5px; color: var(--text-3); margin-top: 4px; font-weight: 500; line-height: 1.3; }
+.rc-cal-btn {
+  display: block; margin-left: auto;
+  padding: 6px 16px; font-size: 12px; font-weight: 600;
+  color: var(--accent); background: transparent;
+  border: 1px solid var(--accent); border-radius: var(--radius);
+  cursor: pointer; transition: all var(--transition);
+}
+.rc-cal-btn:hover { background: var(--accent); color: #fff; }
+.rc-ok { font-size: 12px; color: var(--success); text-align: center; font-weight: 500; }
 
 /* Risk preview table (overview) */
 .rp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -534,7 +548,7 @@ html.dark .cal-cell.risk-day { background: #1C1400; }
 .rp-course-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; color: #fff; }
 .rp-course-names { font-size: 11px; color: var(--text-3); }
 .rp-count   { text-align: center; font-weight: 700; color: var(--text-2); }
-.rp-weight  { text-align: right; font-weight: 800; font-size: 14px; font-family: var(--font-head); }
+.rp-weight  { text-align: right; font-weight: 700; font-size: 13px; color: var(--text-2); }
 .rp-goto    { padding: 4px 10px; font-size: 11px; font-weight: 600; background: var(--accent); color: #fff; border-radius: var(--radius); transition: all var(--transition); }
 .rp-goto:hover { background: var(--accent-2); }
 
@@ -657,4 +671,184 @@ html.dark .cal-cell.risk-day { background: #1C1400; }
   .app-title { font-size: 13px; }
   .top-tab { padding: 5px 10px; font-size: 11.5px; }
   .header-stats { display: none; }
+}
+
+/* Back to calendar button */
+.btn-back-cal {
+  padding: 7px 14px; font-size: 12.5px; font-weight: 600;
+  color: var(--accent); background: var(--accent-light);
+  border: 1px solid var(--accent); border-radius: var(--radius);
+  transition: all var(--transition); white-space: nowrap; cursor: pointer;
+}
+.btn-back-cal:hover { background: var(--accent); color: #fff; }
+.btn-back-cal.hidden { display: none; }
+
+.rp-item-days {
+  font-size: 11px; color: var(--text-2); margin-bottom: 6px;
+  line-height: 1.6; font-weight: 500;
+}
+
+/* ════════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════════
+   SHOW ALL BUTTON
+════════════════════════════════════════════════════════════════ */
+.show-all-btn {
+  display: block; margin: 10px 0 0 auto;
+  padding: 7px 16px; font-size: 12.5px; font-weight: 600;
+  color: var(--text-2); background: var(--surface);
+  border: 1px solid var(--border-2); border-radius: var(--radius);
+  cursor: pointer; transition: all var(--transition);
+  font-family: var(--font-body);
+}
+.show-all-btn:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+
+
+/* ════════════════════════════════════════════════════════════════
+   ANALYTICS — Download buttons, Course Summary, Monthly table
+════════════════════════════════════════════════════════════════ */
+.dl-btn {
+  padding: 5px 12px; font-size: 11.5px; font-weight: 600;
+  color: var(--accent); background: var(--accent-light);
+  border: 1px solid var(--accent); border-radius: var(--radius);
+  cursor: pointer; transition: all var(--transition); white-space: nowrap; flex-shrink: 0;
+}
+.dl-btn:hover { background: var(--accent); color: #fff; }
+
+/* Academic cycle filter bar */
+.analytics-filter-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 12px 0 0; margin-bottom: 14px;
+}
+.analytics-filter-bar .af-label {
+  font-size: 11px; font-weight: 700; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+}
+.af-btn {
+  padding: 5px 14px; font-size: 12px; font-weight: 600;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-2);
+  cursor: pointer; transition: all var(--transition); white-space: nowrap;
+}
+.af-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.af-btn:hover:not(.active) { border-color: var(--accent-mid); color: var(--accent); }
+.af-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+
+/* Course summary table & monthly table */
+.cs-filter {
+  font-size: 12px; padding: 5px 8px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--surface-2);
+  color: var(--text); outline: none; cursor: pointer;
+  font-family: var(--font-body);
+}
+.cs-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.cs-table thead th {
+  padding: 9px 12px; text-align: left; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .5px; color: var(--text-2); border-bottom: 2px solid var(--border);
+  background: var(--surface-2); white-space: nowrap; text-transform: uppercase;
+}
+.cs-table tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
+.cs-table tbody tr:hover { background: var(--accent-light); }
+.cs-table tbody tr:last-child { border-bottom: none; }
+.cs-table td { padding: 9px 12px; vertical-align: middle; }
+.cs-td-num    { text-align: right; font-weight: 600; color: var(--text-2); }
+.cs-td-center { text-align: center; color: var(--text-2); font-weight: 600; }
+.cs-td-types  { color: var(--text-3); font-size: 11.5px; max-width: 200px; }
+.cs-td-range  { color: var(--text-3); font-size: 11.5px; white-space: nowrap; }
+.cs-td-label  { font-weight: 600; color: var(--text); }
+.cs-course-badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; color: #fff; margin-right: 5px;
+}
+.course-summary-wrap { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+.monthly-weekly-table { overflow-x: auto; }
+
+/* ════════════════════════════════════════════════════════════════
+   OVERVIEW — Row 2 charts + Row 3 upcoming
+════════════════════════════════════════════════════════════════ */
+
+/* Row 2: equal columns */
+.ov-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* Overview heatmap — same cells as analytics but compact */
+.ov-heatmap { padding: 4px 0; }
+.ov-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 3px;
+}
+.ov-heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1px solid transparent;
+}
+.ov-heatmap-cell:hover {
+  transform: scale(1.1);
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-md);
+  z-index: 1;
+}
+
+/* Row 3: Upcoming assessments table */
+.ov-upcoming { overflow-x: auto; }
+.ov-upcoming-empty {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 28px; color: var(--text-3); font-size: 13px;
+}
+.ov-upcoming-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+}
+.ov-upcoming-table thead th {
+  padding: 8px 12px; text-align: left; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .5px; color: var(--text-3); border-bottom: 2px solid var(--border);
+  background: var(--surface-2); text-transform: uppercase; white-space: nowrap;
+}
+.ov-upcoming-row {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background var(--transition);
+}
+.ov-upcoming-row:last-child { border-bottom: none; }
+.ov-upcoming-row:hover { background: var(--accent-light); }
+.ov-upcoming-row td { padding: 9px 12px; vertical-align: middle; }
+
+/* Urgency badges */
+.ov-urg {
+  font-size: 10.5px; font-weight: 700; padding: 3px 8px;
+  border-radius: 4px; white-space: nowrap;
+}
+.urg-today    { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
+.urg-tomorrow { background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A; }
+.urg-week     { background: #DBEAFE; color: #1D4ED8; border: 1px solid #BFDBFE; }
+.urg-later    { background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border); }
+html.dark .urg-today    { background: #2D1010; border-color: #7F1D1D; }
+html.dark .urg-tomorrow { background: #2D1E08; border-color: #78350F; }
+html.dark .urg-week     { background: #0E2040; border-color: #1E3A8A; }
+
+.ov-up-date   { color: var(--text-2); white-space: nowrap; font-weight: 500; }
+.ov-course-badge {
+  font-size: 10px; font-weight: 800; padding: 2px 7px;
+  border-radius: 3px; color: #fff; margin-right: 6px; white-space: nowrap;
+}
+.ov-course-name { font-size: 12.5px; color: var(--text); font-weight: 500; }
+.ov-up-detail   { color: var(--text-3); font-size: 12px; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-type-chip   { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.ov-up-weight   { text-align: right; font-weight: 700; color: var(--text-2); white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .ov-charts-row { grid-template-columns: 1fr; }
+}
+
+.ov-upcoming-subtitle {
+  font-size: 11.5px; color: var(--text-3); padding: 6px 12px 8px;
+  font-style: italic;
 }
