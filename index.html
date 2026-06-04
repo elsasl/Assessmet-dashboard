@@ -21,6 +21,7 @@
         <div id="header-stats" class="header-stats"></div>
       </div>
       <div class="top-bar-right">
+        <button id="back-to-calendar" class="btn-back-cal hidden">← Calendar</button>
         <nav class="top-tabs">
           <button class="top-tab" data-tab="overview">Overview</button>
           <button class="top-tab" data-tab="analytics">Analytics</button>
@@ -129,44 +130,69 @@
 
       <!-- Overview Tab -->
       <section id="tab-overview" class="tab-panel">
+
+        <!-- ROW 1: KPIs -->
         <div id="kpi-grid" class="kpi-grid"></div>
-        <div class="overview-grid">
+
+        <!-- ROW 2: Charts side by side -->
+        <div class="ov-charts-row">
           <div class="card">
-            <div class="card-header"><h3 class="card-title">Assessments by Month</h3></div>
+            <div class="card-header">
+              <h3 class="card-title">Assessments by Month</h3>
+            </div>
             <div class="chart-wrap"><canvas id="monthly-chart"></canvas></div>
           </div>
           <div class="card">
-            <div class="card-header"><h3 class="card-title">Risk Summary</h3></div>
-            <div id="risk-counters" class="risk-counters"></div>
+            <div class="card-header">
+              <h3 class="card-title">Weekly Assessment Density</h3>
+              <span class="card-hint">Darker = more assessments</span>
+            </div>
+            <div id="ov-heatmap" class="ov-heatmap"></div>
           </div>
         </div>
+
+        <!-- ROW 3: Upcoming assessments -->
         <div class="card" style="margin-top:14px">
           <div class="card-header">
-            <h3 class="card-title">Top Risk Alerts</h3>
-            <button class="card-link-btn" id="overview-see-risk">← Back to Calendar</button>
+            <h3 class="card-title">Assessments Starting Today Onwards</h3>
+            <span class="card-hint">Next 14 days · click to view in calendar</span>
           </div>
-          <div id="risk-preview"></div>
+          <div id="ov-upcoming" class="ov-upcoming"></div>
         </div>
+
       </section>
 
       <!-- Analytics Tab -->
       <section id="tab-analytics" class="tab-panel">
+
+        <!-- Academic cycle + term filters -->
+        <div class="analytics-filter-bar">
+          <span class="af-label">Cycle:</span>
+          <div id="af-cycle" style="display:flex;gap:4px"></div>
+          <div class="af-sep"></div>
+          <span class="af-label">Term:</span>
+          <button class="af-btn active" data-term="all">All</button>
+          <button class="af-btn" data-term="Winter">Winter</button>
+          <button class="af-btn" data-term="Fall">Fall</button>
+          <button class="af-btn" data-term="All Year">All Year</button>
+        </div>
+
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">Weekly Workload Distribution</h3>
-            <span class="card-hint">All assessments · Bars = count · Line = weight %</span>
+            <div style="display:flex;align-items:center;gap:10px"><span class="card-hint">All assessments · Bars = count · Line = weight %</span><button class="dl-btn" data-dl="weekly">⬇ Excel</button></div>
           </div>
           <div class="chart-wrap chart-tall"><canvas id="weekly-chart"></canvas></div>
         </div>
         <div class="analytics-grid">
           <div class="card">
-            <div class="card-header"><h3 class="card-title">Assessment Type Distribution</h3></div>
+            <div class="card-header"><h3 class="card-title">Assessment Type Distribution</h3><button class="dl-btn" data-dl="types">⬇ Excel</button></div>
             <div class="chart-wrap"><canvas id="type-chart"></canvas></div>
           </div>
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">Average Weight by Assessment Type</h3>
-              <span class="card-hint">Mean % per type</span>
+              <div style="display:flex;align-items:center;gap:10px"><span class="card-hint">Mean % per type</span><button class="dl-btn" data-dl="avgweight">⬇ Excel</button></div>
             </div>
             <div class="chart-wrap"><canvas id="avg-weight-chart"></canvas></div>
           </div>
@@ -187,9 +213,29 @@
             <div id="overlap-list" class="overlap-list"></div>
           </div>
           <div class="card">
-            <div class="card-header"><h3 class="card-title">Course Breakdown</h3></div>
-            <div id="course-breakdown" class="course-breakdown"></div>
+            <div class="card-header">
+              <h3 class="card-title">Assessments by Month</h3>
+              <button class="dl-btn" data-dl="monthly">⬇ Excel</button>
+            </div>
+            <div id="monthly-weekly-table" class="monthly-weekly-table"></div>
           </div>
+        </div>
+
+        <!-- Course Summary -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-header">
+            <h3 class="card-title">Course Summary</h3>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="cs-filter-year" class="cs-filter">
+                <option value="all">All Years</option>
+              </select>
+              <select id="cs-filter-course" class="cs-filter">
+                <option value="all">All Courses</option>
+              </select>
+              <button class="dl-btn" data-dl="courses">⬇ Excel</button>
+            </div>
+          </div>
+          <div id="course-summary-table" class="course-summary-wrap"></div>
         </div>
       </section>
 
@@ -230,13 +276,13 @@
   <div id="modal" class="modal-container"></div>
 
   <!-- Scripts -->
-  <script src="authLayer.js"></script>
-  <script src="dataService.js"></script>
-  <script src="stateManager.js"></script>
-  <script src="dataParser.js"></script>
-  <script src="analyticsEngine.js"></script>
-  <script src="riskDetector.js"></script>
-  <script src="calendarEngine.js"></script>
+  <script src="core/authLayer.js"></script>
+  <script src="core/dataService.js"></script>
+  <script src="core/stateManager.js"></script>
+  <script src="core/dataParser.js"></script>
+  <script src="core/analyticsEngine.js"></script>
+  <script src="core/riskDetector.js"></script>
+  <script src="core/calendarEngine.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
