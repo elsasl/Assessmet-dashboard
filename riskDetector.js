@@ -122,23 +122,31 @@ const RiskDetector = (() => {
 
       if (weekdays.length < MIN_CONSEC_DAYS) return;
 
-      // Find runs of consecutive weekdays
+      // Find runs of STRICTLY consecutive weekdays
+      // Fri → Mon is NOT consecutive — weekend breaks the streak
+      // Only Mon→Tue, Tue→Wed, Wed→Thu, Thu→Fri count
       let streak = [weekdays[0]];
 
       for (let i = 1; i < weekdays.length; i++) {
-        const prev = streak[streak.length - 1];
-        if (isNextWeekday(prev.date, weekdays[i].date)) {
-          // Truly the next weekday — extend streak
+        const prev    = streak[streak.length - 1];
+        const prevDay = prev.date.getDay();       // 0=Sun,1=Mon...5=Fri
+        const currDay = weekdays[i].date.getDay();
+        const prevDate = prev.date;
+        const currDate = weekdays[i].date;
+        const diffDays = Math.round((currDate - prevDate) / (1000*60*60*24));
+
+        // Strictly next calendar day AND both are weekdays (diff = 1)
+        const isStrict = diffDays === 1 && prevDay >= 1 && prevDay <= 4 && currDay >= 2 && currDay <= 5;
+
+        if (isStrict) {
           streak.push(weekdays[i]);
         } else {
-          // Gap — check if completed streak qualifies
           if (streak.length >= MIN_CONSEC_DAYS) {
             clusters.push(_buildCluster(streak, clusters.length, parseInt(year)));
           }
           streak = [weekdays[i]];
         }
       }
-      // Check final streak
       if (streak.length >= MIN_CONSEC_DAYS) {
         clusters.push(_buildCluster(streak, clusters.length, parseInt(year)));
       }
