@@ -9,6 +9,13 @@
   let _highlightedRiskId = null;
   let _dtSortCol         = 'effectiveDate';
   let _dtSortDir         = 'asc';
+  let _ovYear            = 'all';
+  let _ovMonth           = 'all';
+  let _ovType            = 'all';
+  let _afCycle           = 'all';
+  let _afTerm            = 'all';
+  let _csYear            = 'all';
+  let _csCourse          = 'all';
 
   // ── Load CSV ─────────────────────────────────────────────────────────────
   let rawData;
@@ -69,9 +76,11 @@
     renderCalendar();
     renderRiskPanel();
 
-    // Render active tab or default main view
+    // Render current view
     const tab = StateManager.get('activeTab');
     renderTab(tab || null);
+    // Always re-render overview if active (KPIs + upcoming must update with filters)
+    if (tab === 'overview') renderOverview();
   }
 
   function recomputeRisks(data) {
@@ -87,19 +96,20 @@
   function renderTab(tab) {
     const mainView = document.getElementById('main-view');
     const panels   = document.querySelectorAll('.tab-panel');
+    const backBtn  = document.getElementById('back-to-calendar');
     panels.forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.top-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
 
     if (!tab) {
-      // Show calendar + risk panel
       if (mainView) mainView.style.display = 'grid';
+      if (backBtn)  backBtn.classList.add('hidden');
       renderCalendar();
       renderRiskPanel();
       return;
     }
 
-    // Hide main view, show tab panel
     if (mainView) mainView.style.display = 'none';
+    if (backBtn)  backBtn.classList.remove('hidden');
     const panel = document.getElementById(`tab-${tab}`);
     if (panel) panel.classList.add('active');
 
@@ -201,12 +211,15 @@
       filteredClusters.forEach(seq => {
         const isHighlighted = seq.id === _highlightedRiskId;
         const courseNums    = [...new Set(seq.items.map(a => a.course))];
+        const clDays = seq.dayGroups
+          ? seq.dayGroups.map(d => d.date.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'})).join(' · ')
+          : `${formatDShort(seq.startDate)} – ${formatDShort(seq.endDate)}`;
         html += `<div class="rp-item rp-item-cluster ${isHighlighted ? 'highlighted' : ''}" data-rid="${seq.id}">
           <div class="rp-item-date-row">
             <span class="rp-item-date">${formatDShort(seq.startDate)} – ${formatDShort(seq.endDate)}</span>
             <span class="rp-item-year-pill" style="background:${colorForYear(seq.year)}">Yr ${seq.year||'?'}</span>
           </div>
-          <div class="rp-item-meta">${seq.numDays} consecutive days</div>
+          <div class="rp-item-days">${clDays}</div>
           <div class="rp-item-chips">
             ${courseNums.slice(0,4).map(cn => `<span class="rp-chip" style="border-color:${colorMap[cn]||'#1A3A6B'};background:${colorMap[cn]||'#1A3A6B'}18">${cn}</span>`).join('')}
             ${courseNums.length > 4 ? `<span class="rp-chip rp-chip-more">+${courseNums.length-4}</span>` : ''}
@@ -218,16 +231,24 @@
 
     body.innerHTML = html;
 
-    // Wire clicks — navigate calendar to that date and highlight
+    // Wire clicks — filter calendar to only this alert's assessments
     body.querySelectorAll('.rp-item').forEach(item => {
       item.addEventListener('click', () => {
         const rid = item.dataset.rid;
         const seq = allSeqs.find(s => s.id === rid);
         if (!seq) return;
+
         _highlightedRiskId = rid;
+
+        // Filter calendar to show only this alert's assessments
+        StateManager.set('filteredData', seq.items);
         StateManager.set('calendarDate', new Date(seq.startDate));
         StateManager.set('calendarView', seq.alertType === 'same-day' ? 'week' : 'month');
-        // Switch back to main view if on a tab
+
+        // Show "Show All" banner
+        showAlertFilterBanner(seq);
+
+        // Switch to main view if on a tab
         if (StateManager.get('activeTab')) {
           StateManager.set('activeTab', null);
           renderTab(null);
@@ -358,30 +379,184 @@
   // ════════════════════════════════════════════════════════════════════════
   // OVERVIEW TAB
   // ════════════════════════════════════════════════════════════════════════
+  // Overview has independent filters — not affected by calendar/other tab filters
+  function getOverviewData() {
+    // Overview uses the sidebar filters (same as calendar) for consistency
+    return StateManager.get('filteredData');
+  }
+
   function renderOverview() {
-    const data = StateManager.get('filteredData');
+    const data = getOverviewData();
     const kpis = AnalyticsEngine.getKPIs(data);
     const seqs = StateManager.get('riskSequences') || [];
 
+    // ROW 1 — KPI cards
     const kpiEl = document.getElementById('kpi-grid');
     if (kpiEl) kpiEl.innerHTML = [
-      ['📋','Total Assessments',kpis.total,'blue'],
-      ['📝','Quizzes',kpis.quizzes,'teal'],
-      ['📘','Midterms',kpis.midterms,'amber'],
-      ['🎓','Final Exams',kpis.finals,'red'],
-      ['📎','Assignments',kpis.assignments,'purple'],
-      ['🔬','Labs & OSCEs',kpis.labs+kpis.osces,'green'],
-      ['🏫','Courses',kpis.courses,'indigo'],
-      ['⚖️','Avg Weight',kpis.avgWeight+'%','pink'],
-    ].map(([icon,label,val,color]) => `<div class="kpi-card kpi-${color}">
-      <div class="kpi-icon">${icon}</div>
-      <div><div class="kpi-value">${val}</div><div class="kpi-label">${label}</div></div>
+      ['Total',        kpis.total,             'blue'],
+      ['Quizzes',      kpis.quizzes,           'teal'],
+      ['Midterms',     kpis.midterms,          'amber'],
+      ['Finals',       kpis.finals,            'red'],
+      ['Assignments',  kpis.assignments,       'purple'],
+      ['Labs & OSCEs', kpis.labs+kpis.osces,  'green'],
+      ['Courses',      kpis.courses,           'indigo'],
+      ['Avg Weight',   kpis.avgWeight+'%',     'pink'],
+    ].map(([label,val,color]) => `<div class="kpi-card kpi-${color}">
+      <div class="kpi-value">${val}</div>
+      <div class="kpi-label">${label}</div>
     </div>`).join('');
 
+    // ROW 2 — Charts
     renderMonthlyChart(data);
-    renderRiskCounters(seqs);
-    renderRiskPreview(seqs);
+    renderOverviewHeatmap(data);
+
+    // ROW 3 — Upcoming
+    renderUpcoming();
+
     renderHeaderStats(data.length, StateManager.get('assessments').length, seqs);
+  }
+
+  // ── Overview heatmap (compact version of analytics heatmap) ─────────────
+  function renderOverviewHeatmap(data) {
+    const el = document.getElementById('ov-heatmap');
+    if (!el) return;
+    const weeks = AnalyticsEngine.getByWeek(data);
+    if (!weeks.length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
+    const max = Math.max(...weeks.map(w => w.count), 1);
+    function shade(n) {
+      const t = n / max;
+      if (t === 0)  return { bg: '#EEF0F4', text: '#9AA0AE' };
+      if (t < .25)  return { bg: '#C7D9F0', text: '#1A3A6B' };
+      if (t < .50)  return { bg: '#7AAED6', text: '#0F2040' };
+      if (t < .75)  return { bg: '#2E6FAF', text: '#fff' };
+                    return { bg: '#1A3A6B', text: '#fff' };
+    }
+    el.innerHTML = `<div class="ov-heatmap-grid">${weeks.map(w => {
+      const s   = shade(w.count);
+      const lbl = new Date(w.week + 'T12:00:00').toLocaleDateString('en-CA', { month:'short', day:'numeric' });
+      return `<div class="ov-heatmap-cell" style="background:${s.bg}" title="${lbl}: ${w.count} assessments" data-week="${w.week}">
+        <span style="font-size:12px;font-weight:700;color:${s.text}">${w.count}</span>
+        <span style="font-size:9px;color:${s.text};opacity:.8">${lbl}</span>
+      </div>`;
+    }).join('')}</div>
+    <div class="heatmap-legend" style="margin-top:8px">
+      <span style="font-size:11px;color:var(--text-3)">Fewer</span>
+      <div class="hm-legend-scale">${['#EEF0F4','#C7D9F0','#7AAED6','#2E6FAF','#1A3A6B'].map(bg =>
+        `<div class="hm-legend-swatch" style="background:${bg}"></div>`).join('')}
+      </div>
+      <span style="font-size:11px;color:var(--text-3)">More</span>
+    </div>`;
+    el.querySelectorAll('.ov-heatmap-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const w = weeks.find(x => x.week === cell.dataset.week);
+        if (w) {
+          StateManager.set('filteredData', w.assessments);
+          StateManager.set('calendarDate', new Date(w.week + 'T12:00:00'));
+          StateManager.set('calendarView', 'week');
+          StateManager.set('activeTab', null);
+          renderTab(null);
+        }
+      });
+    });
+  }
+
+  // ── Upcoming assessments ────────────────────────────────────────────────
+  // If filters active → show filtered data sorted by date
+  // If no filters → show next 14 days from today (or nearest future assessments)
+  function renderUpcoming() {
+    const el = document.getElementById('ov-upcoming');
+    if (!el) return;
+
+    const filters    = StateManager.get('filters');
+    const hasFilters = filters.year !== 'all' || filters.month !== 'all' ||
+                       filters.course !== 'all' || filters.type !== 'all' || filters.search;
+
+    let upcoming;
+
+    if (hasFilters) {
+      // Show filtered assessments sorted by date (limit 20 for readability)
+      upcoming = StateManager.get('filteredData')
+        .filter(a => a.effectiveDate)
+        .sort((a,b) => a.effectiveDate - b.effectiveDate)
+        .slice(0, 20);
+    } else {
+      // No filters — show next 14 days from today
+      const all   = StateManager.get('assessments');
+      const today = new Date(); today.setHours(0,0,0,0);
+      const end   = new Date(today); end.setDate(end.getDate() + 14);
+      upcoming = all
+        .filter(a => a.effectiveDate && a.effectiveDate >= today && a.effectiveDate <= end)
+        .sort((a,b) => a.effectiveDate - b.effectiveDate);
+
+      // If nothing in next 14 days (e.g. historical data), show next 10 assessments
+      if (!upcoming.length) {
+        upcoming = all
+          .filter(a => a.effectiveDate)
+          .sort((a,b) => a.effectiveDate - b.effectiveDate)
+          .slice(0, 10);
+      }
+    }
+
+    if (!upcoming.length) {
+      el.innerHTML = `<div class="ov-upcoming-empty">
+        <span style="font-size:22px">📭</span>
+        <span>No assessments found for this selection</span>
+      </div>`;
+      return;
+    }
+
+    const todayStr    = today.toISOString().slice(0,10);
+    const tomorrowStr = new Date(today.getTime()+86400000).toISOString().slice(0,10);
+
+    function urgencyBadge(date) {
+      const diffDays = Math.round((date - today) / 86400000);
+      if (diffDays === 0) return { label: 'Today',     cls: 'urg-today' };
+      if (diffDays === 1) return { label: 'Tomorrow',  cls: 'urg-tomorrow' };
+      if (diffDays <= 7)  return { label: `In ${diffDays}d`, cls: 'urg-week' };
+      return                     { label: `In ${diffDays}d`, cls: 'urg-later' };
+    }
+
+    const filters2    = StateManager.get('filters');
+    const hasFilters2 = filters2.year !== 'all' || filters2.month !== 'all' ||
+                        filters2.course !== 'all' || filters2.type !== 'all' || filters2.search;
+    const tableTitle  = hasFilters2 ? `${upcoming.length} assessments matching filters` : `Next assessments from today`;
+    const hintEl = document.getElementById('ov-upcoming-hint');
+    if (hintEl) hintEl.textContent = hasFilters2 ? 'Showing filtered results · click row to view details' : 'Next 14 days · click row to view details';
+
+    el.innerHTML = `<div class="ov-upcoming-subtitle">${tableTitle}</div>
+    <table class="ov-upcoming-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Due In</th>
+          <th>Course</th>
+          <th>Assessment</th>
+          <th>Type</th>
+          <th style="text-align:right">Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${upcoming.map(a => {
+          const color  = colorMap[a.course] || '#1A3A6B';
+          const urg    = urgencyBadge(a.effectiveDate);
+          return `<tr class="ov-upcoming-row" data-id="${a._id}">
+            <td class="ov-up-date">${a.effectiveDate.toLocaleDateString('en-CA',{weekday:'short',month:'short',day:'numeric'})}</td>
+            <td><span class="ov-urg ${urg.cls}">${urg.label}</span></td>
+            <td>
+              <span class="ov-course-badge" style="background:${color}">${a.course}</span>
+              <span class="ov-course-name">${a.courseName}</span>
+            </td>
+            <td class="ov-up-detail">${a.details || '—'}</td>
+            <td><span class="ov-type-chip" style="color:${color};background:${color}18">${a.type}</span></td>
+            <td class="ov-up-weight">${a.weightRaw || '—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+    el.querySelectorAll('.ov-upcoming-row').forEach(row => {
+      row.addEventListener('click', () => openAssessmentModal(row.dataset.id));
+    });
   }
 
   function renderMonthlyChart(data) {
@@ -394,23 +569,58 @@
     const lc = isDark ? '#7A95B0' : '#6B7280';
     window._monthlyChart = new Chart(canvas, {
       type: 'bar',
-      data: { labels: monthly.map(m=>m.month.slice(0,3)), datasets: [{ label:'Assessments', data: monthly.map(m=>m.count), backgroundColor: monthly.map((_,i)=>`hsl(${210+i*15},65%,55%)`), borderRadius: 4, borderSkipped: false }] },
-      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales: { x:{grid:{color:gc},ticks:{color:lc}}, y:{grid:{color:gc},ticks:{color:lc},beginAtZero:true} } }
+      data: {
+        labels: monthly.map(m=>m.month.slice(0,3)),
+        datasets: [{
+          label: 'Assessments',
+          data: monthly.map(m=>m.count),
+          backgroundColor: isDark ? 'rgba(74,111,165,0.7)' : 'rgba(26,58,107,0.35)',
+          borderColor:     isDark ? 'rgba(74,111,165,1)'   : 'rgba(26,58,107,0.8)',
+          borderWidth: 1.5,
+          borderRadius: 4,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: lc, font: { size: 12 } }, border: { display: false } },
+          y: { grid: { color: gc }, ticks: { color: lc, stepSize: 5 }, border: { display: false }, beginAtZero: true },
+        },
+      }
     });
   }
 
   function renderRiskCounters(seqs) {
     const el = document.getElementById('risk-counters');
     if (!el) return;
-    const overlaps  = seqs.filter(s => s.alertType === 'same-day');
-    const clusters  = seqs.filter(s => s.alertType === 'cluster');
-    const critical  = clusters.filter(s => s.severity === 'critical' || s.severity === 'high');
-    el.innerHTML = `<div class="rc-row">
-      <div class="rc-block rc-overlap"><div class="rc-num">${overlaps.length}</div><div class="rc-lbl">Same-Day Overlaps</div></div>
-      <div class="rc-block rc-cluster"><div class="rc-num">${clusters.length}</div><div class="rc-lbl">Back-to-Back Streaks</div></div>
-      <div class="rc-block rc-critical"><div class="rc-num">${critical.length}</div><div class="rc-lbl">High/Critical</div></div>
-    </div>
-    <div class="rc-note">${seqs.length ? 'Visible in Calendar risk panel →' : '✅ No risk alerts detected'}</div>`;
+    const overlaps = seqs.filter(s => s.alertType === 'same-day');
+    const clusters = seqs.filter(s => s.alertType === 'cluster');
+    const critical = clusters.filter(s => s.severity === 'critical' || s.severity === 'high');
+    el.innerHTML = `
+      <div class="rc-grid">
+        <div class="rc-stat">
+          <div class="rc-stat-num" style="color:#B45309">${overlaps.length}</div>
+          <div class="rc-stat-lbl">Same-Day Overlaps</div>
+        </div>
+        <div class="rc-stat">
+          <div class="rc-stat-num" style="color:#B91C1C">${clusters.length}</div>
+          <div class="rc-stat-lbl">Back-to-Back Streaks</div>
+        </div>
+        <div class="rc-stat">
+          <div class="rc-stat-num" style="color:#6D28D9">${critical.length}</div>
+          <div class="rc-stat-lbl">High / Critical</div>
+        </div>
+      </div>
+      ${seqs.length
+        ? `<button class="rc-cal-btn" id="rc-cal-btn">View in Calendar →</button>`
+        : `<div class="rc-ok">✅ No risk alerts detected</div>`
+      }`;
+    document.getElementById('rc-cal-btn')?.addEventListener('click', () => {
+      StateManager.set('activeTab', null);
+      renderTab(null);
+    });
   }
 
   function renderRiskPreview(seqs) {
@@ -584,19 +794,253 @@
     });
   }
 
-  function renderCourseBreakdown(data) {
-    const courses = AnalyticsEngine.getByCourse(data);
-    const el      = document.getElementById('course-breakdown');
+  // ── Analytics filter state ───────────────────────────────────────────────
+  function getAnalyticsData() {
+    let data = StateManager.get('assessments');
+    if (_afCycle !== 'all') {
+      // Academic cycle: "2025-2026" means year column 1/2/3 doesn't filter — filter by date range
+      const [startYr, endYr] = _afCycle.split('-').map(Number);
+      data = data.filter(a => {
+        if (!a.effectiveDate) return false;
+        const yr = a.effectiveDate.getFullYear();
+        const mo = a.effectiveDate.getMonth(); // 0=Jan
+        // Academic year: Aug of startYr to Jul of endYr
+        return (yr === startYr && mo >= 7) || (yr === endYr && mo <= 6);
+      });
+    }
+    if (_afTerm !== 'all') {
+      data = data.filter(a => a.term === _afTerm);
+    }
+    return data;
+  }
+
+  function setupAnalyticsFilters() {
+    // Build cycle buttons from data
+    const all = StateManager.get('assessments');
+    const cycleEl = document.getElementById('af-cycle');
+    if (!cycleEl || cycleEl.dataset.built === '1') return;
+
+    // Detect academic years from data dates
+    const years = new Set();
+    all.filter(a => a.effectiveDate).forEach(a => {
+      const yr = a.effectiveDate.getFullYear();
+      const mo = a.effectiveDate.getMonth();
+      const acYear = mo >= 7 ? yr : yr - 1;
+      years.add(acYear);
+    });
+
+    const cycles = ['all', ...[...years].sort().map(y => `${y}-${y+1}`)];
+    cycleEl.innerHTML = cycles.map(cy =>
+      `<button class="af-btn ${cy === _afCycle ? 'active' : ''}" data-cycle="${cy}">
+        ${cy === 'all' ? 'All Cycles' : cy}
+      </button>`
+    ).join('');
+    cycleEl.dataset.built = '1';
+
+    cycleEl.querySelectorAll('.af-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _afCycle = btn.dataset.cycle;
+        cycleEl.querySelectorAll('.af-btn').forEach(b => b.classList.toggle('active', b.dataset.cycle === _afCycle));
+        refreshAnalytics();
+      });
+    });
+
+    // Term buttons
+    document.querySelectorAll('[data-term]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _afTerm = btn.dataset.term;
+        document.querySelectorAll('[data-term]').forEach(b => b.classList.toggle('active', b.dataset.term === _afTerm));
+        refreshAnalytics();
+      });
+    });
+  }
+
+  function refreshAnalytics() {
+    const data = getAnalyticsData();
+    renderWeeklyWorkload(data);
+    renderTypeDistribution(data);
+    renderAvgWeightByType(data);
+    renderWeeklyHeatmap(data);
+    renderOverlapAnalysis(data);
+    renderMonthlyWeeklyTable(data);
+    renderCourseSummary(data);
+    setupDownloadButtons(data);
+  }
+
+  function renderAnalytics() {
+    setupAnalyticsFilters();
+    const data = getAnalyticsData();
+    renderWeeklyWorkload(data);
+    renderTypeDistribution(data);
+    renderAvgWeightByType(data);
+    renderWeeklyHeatmap(data);
+    renderOverlapAnalysis(data);
+    renderMonthlyWeeklyTable(data);
+    renderCourseSummary(data);
+    setupDownloadButtons(data);
+    setupCourseSummaryFilters(data);
+  }
+
+  // ── Monthly/Weekly table ────────────────────────────────────────────────
+  function renderMonthlyWeeklyTable(data) {
+    const el = document.getElementById('monthly-weekly-table');
     if (!el) return;
-    el.innerHTML = courses.map(c => {
-      const color = colorMap[c.courseId] || '#1A3A6B';
-      return `<div class="course-row">
-        <div class="course-row-dot" style="background:${color}"></div>
-        <div class="course-row-name">${c.courseName}</div>
-        <div class="course-row-badges">${Object.entries(c.types).map(([t,items])=>`<span class="type-badge">${t}: ${items.length}</span>`).join('')}</div>
-        <div class="course-row-weight">${c.totalWeight.toFixed(0)}%</div>
-      </div>`;
-    }).join('');
+    const monthly = AnalyticsEngine.getByMonth(data);
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    el.innerHTML = `<table class="cs-table">
+      <thead><tr><th>Month</th><th style="text-align:center"># Assessments</th><th style="text-align:center">Avg Weight %</th></tr></thead>
+      <tbody>${monthly.map(m => {
+        const items   = data.filter(a => a.effectiveDate && MONTHS[a.effectiveDate.getMonth()] === m.month);
+        const weights = items.filter(a => a.weight).map(a => a.weight);
+        const avg     = weights.length ? (weights.reduce((s,w)=>s+w,0)/weights.length).toFixed(1) : '—';
+        return `<tr>
+          <td class="cs-td-label">${m.month}</td>
+          <td class="cs-td-num" style="text-align:center">${m.count}</td>
+          <td class="cs-td-num" style="text-align:center">${avg !== '—' ? avg+'%' : '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  // ── Course Summary ───────────────────────────────────────────────────────
+  function setupCourseSummaryFilters(data) {
+    const yearEl   = document.getElementById('cs-filter-year');
+    const courseEl = document.getElementById('cs-filter-course');
+    if (!yearEl || !courseEl) return;
+
+    // Populate year options once
+    if (yearEl.dataset.populated !== '1') {
+      [...new Set(data.map(a => a.year))].sort().forEach(y => {
+        const o = document.createElement('option'); o.value=y; o.textContent=`Year ${y}`; yearEl.appendChild(o);
+      });
+      yearEl.dataset.populated = '1';
+    }
+    if (courseEl.dataset.populated !== '1') {
+      [...new Map(data.map(a=>[a.course,a.courseName])).entries()].sort((a,b)=>a[0]-b[0]).forEach(([id,name]) => {
+        const o = document.createElement('option'); o.value=id; o.textContent=`${id} – ${name.slice(0,24)}`; courseEl.appendChild(o);
+      });
+      courseEl.dataset.populated = '1';
+    }
+
+    yearEl.onchange   = e => { _csYear   = e.target.value; renderCourseSummary(data); };
+    courseEl.onchange = e => { _csCourse = e.target.value; renderCourseSummary(data); };
+  }
+
+  function renderCourseSummary(data) {
+    const el = document.getElementById('course-summary-table');
+    if (!el) return;
+
+    let filtered = data;
+    if (_csYear   !== 'all') filtered = filtered.filter(a => String(a.year)   === String(_csYear));
+    if (_csCourse !== 'all') filtered = filtered.filter(a => String(a.course) === String(_csCourse));
+
+    // Group by course
+    const byCourse = {};
+    filtered.forEach(a => {
+      if (!byCourse[a.course]) byCourse[a.course] = { id:a.course, name:a.courseName, year:a.year, items:[] };
+      byCourse[a.course].items.push(a);
+    });
+
+    const rows = Object.values(byCourse).sort((a,b) => a.id - b.id);
+    if (!rows.length) { el.innerHTML='<div class="empty-state">No data for this selection</div>'; return; }
+
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    el.innerHTML = `<table class="cs-table cs-summary-table">
+      <thead><tr>
+        <th>Course</th><th>Year</th><th>Assessments</th>
+        <th>Avg Weight %</th><th>Types</th><th>Date Range</th><th>Peak Month</th>
+      </tr></thead>
+      <tbody>${rows.map(c => {
+        const weights   = c.items.filter(a=>a.weight).map(a=>a.weight);
+        const avgW      = weights.length ? (weights.reduce((s,w)=>s+w,0)/weights.length).toFixed(1) : '—';
+        const dated     = c.items.filter(a=>a.effectiveDate).sort((a,b)=>a.effectiveDate-b.effectiveDate);
+        const dateRange = dated.length ? `${formatDShort(dated[0].effectiveDate)} – ${formatDShort(dated[dated.length-1].effectiveDate)}` : '—';
+        const byType    = {};
+        c.items.forEach(a => { byType[a.type] = (byType[a.type]||0)+1; });
+        const typeStr   = Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([t,n])=>`${t} (${n})`).join(', ');
+        const byMonth   = {};
+        dated.forEach(a => { const m = a.effectiveDate.getMonth(); byMonth[m]=(byMonth[m]||0)+1; });
+        const peakMonth = Object.entries(byMonth).sort((a,b)=>b[1]-a[1])[0];
+        const peak      = peakMonth ? `${MONTHS[peakMonth[0]]} (${peakMonth[1]})` : '—';
+        const dot       = colorMap[c.id] || '#1A3A6B';
+        return `<tr>
+          <td><span class="cs-course-badge" style="background:${dot}">${c.id}</span> ${c.name}</td>
+          <td class="cs-td-center">Yr ${c.year}</td>
+          <td class="cs-td-num">${c.items.length}</td>
+          <td class="cs-td-num">${avgW}${avgW!=='—'?'%':''}</td>
+          <td class="cs-td-types">${typeStr}</td>
+          <td class="cs-td-range">${dateRange}</td>
+          <td class="cs-td-center">${peak}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  // ── Excel/CSV Downloads ─────────────────────────────────────────────────
+  function setupDownloadButtons(data) {
+    document.querySelectorAll('.dl-btn').forEach(btn => {
+      btn.onclick = () => downloadExcel(btn.dataset.dl, data);
+    });
+  }
+
+  function downloadExcel(type, data) {
+    let rows = [], filename = '';
+
+    if (type === 'weekly') {
+      const weeks = AnalyticsEngine.getByWeek(data);
+      rows = [['Week Starting','# Assessments','Total Weight %','Avg Weight %'],
+        ...weeks.map(w => {
+          const ws = w.assessments.filter(a=>a.weight).map(a=>a.weight);
+          const total = ws.reduce((s,v)=>s+v,0);
+          return [w.week, w.count, total.toFixed(1), ws.length?(total/ws.length).toFixed(1):''];
+        })];
+      filename = 'weekly_workload.csv';
+    }
+    else if (type === 'types') {
+      const types = AnalyticsEngine.getTypeDistribution(data);
+      rows = [['Type','Count','Avg Weight %'], ...types.map(t=>[t.type,t.count,t.avgWeight])];
+      filename = 'type_distribution.csv';
+    }
+    else if (type === 'avgweight') {
+      const byType = {};
+      data.filter(a=>a.weight).forEach(a=>{if(!byType[a.type])byType[a.type]=[];byType[a.type].push(a.weight);});
+      rows = [['Type','Avg Weight %','Count'],
+        ...Object.entries(byType).map(([t,ws])=>[t,(ws.reduce((s,v)=>s+v,0)/ws.length).toFixed(1),ws.length])];
+      filename = 'avg_weight_by_type.csv';
+    }
+    else if (type === 'monthly') {
+      const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const monthly = AnalyticsEngine.getByMonth(data);
+      rows = [['Month','# Assessments','Avg Weight %'],
+        ...monthly.map(m => {
+          const items = data.filter(a=>a.effectiveDate&&MONTHS[a.effectiveDate.getMonth()]===m.month);
+          const ws = items.filter(a=>a.weight).map(a=>a.weight);
+          const avg = ws.length?(ws.reduce((s,v)=>s+v,0)/ws.length).toFixed(1):'';
+          return [m.month, m.count, avg];
+        })];
+      filename = 'monthly_assessments.csv';
+    }
+    else if (type === 'courses') {
+      rows = [['Course ID','Course Name','Year','# Assessments','Avg Weight %','Types','Date Range']];
+      const byCourse = {};
+      data.forEach(a=>{if(!byCourse[a.course])byCourse[a.course]={id:a.course,name:a.courseName,year:a.year,items:[]};byCourse[a.course].items.push(a);});
+      Object.values(byCourse).sort((a,b)=>a.id-b.id).forEach(c=>{
+        const ws = c.items.filter(a=>a.weight).map(a=>a.weight);
+        const avg = ws.length?(ws.reduce((s,v)=>s+v,0)/ws.length).toFixed(1):'';
+        const types = [...new Set(c.items.map(a=>a.type))].join('; ');
+        const dated = c.items.filter(a=>a.effectiveDate).sort((a,b)=>a.effectiveDate-b.effectiveDate);
+        const range = dated.length?`${formatDShort(dated[0].effectiveDate)} – ${formatDShort(dated[dated.length-1].effectiveDate)}`:'';
+        rows.push([c.id,`"${c.name}"`,c.year,c.items.length,avg,`"${types}"`,range]);
+      });
+      filename = 'course_summary.csv';
+    }
+
+    const csv  = rows.map(r=>r.join(',')).join('\n');
+    const blob = new Blob([csv],{type:'text/csv'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a'); a.href=url; a.download=filename; a.click();
+    URL.revokeObjectURL(url);
   }
 
   // ════════════════════════════════════════════════════════════════════════
@@ -758,12 +1202,40 @@
   }
 
   // ════════════════════════════════════════════════════════════════════════
+  // ALERT FILTER BANNER
+  // ════════════════════════════════════════════════════════════════════════
+  function showAlertFilterBanner() {
+    document.getElementById('show-all-btn')?.remove();
+    const btn = document.createElement('button');
+    btn.id        = 'show-all-btn';
+    btn.className = 'show-all-btn';
+    btn.textContent = 'Show All Assessments';
+    const calCard = document.querySelector('.cal-card');
+    if (calCard) calCard.after(btn);
+    btn.addEventListener('click', () => {
+      StateManager.set('filteredData', StateManager.get('assessments'));
+      _highlightedRiskId = null;
+      btn.remove();
+      renderCalendar();
+      renderRiskPanel();
+    });
+  }
+
+
+  // ════════════════════════════════════════════════════════════════════════
   // UI SETUP
   // ════════════════════════════════════════════════════════════════════════
   function setupUI() {
     // Secondary tabs
     document.querySelectorAll('.top-tab').forEach(btn => {
       btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Back to calendar button
+    const backBtn = document.getElementById('back-to-calendar');
+    if (backBtn) backBtn.addEventListener('click', () => {
+      StateManager.set('activeTab', null);
+      renderTab(null);
     });
 
     // Overview "see all" button
